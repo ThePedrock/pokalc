@@ -4,11 +4,9 @@ from PIL import Image, ImageTk
 import json
 from threading import Thread
 from threading import Event
-import speech_recognition as sr
 from enum import Enum
 
 from table.card import Card
-from table.deck import Deck
 from table.play import Play
 from table.suit import Suit
 from calculator.game import Game
@@ -16,8 +14,6 @@ from calculator.game import Game
 class UI:
     APPVERSION = "1.0"
     WINDOWS_SIZE = [850, 605]
-
-    STOP_RECORD_ON_CLICK = True
 
     ## IMAGE FROM: http://clipart-library.com/clipart/pT7K7d88c.htm ##
     POKER_DECK_IMAGE = "resources/pokerDeck.png"
@@ -39,21 +35,15 @@ class UI:
 
     _card_frames = [None, None, None, None, None, None, None]
     _card_labels = [None, None, None, None, None, None, None]
-    _card_rectangles = [None, None, None, None, None, None, None]
     _result_frame = None
-    
-    _smallRectangle = None
-    _bigRectangle = None
 
     _opponent_buttons = [None, None]
     _opponent_label = None
     _reset_button = None
 
-    _microphone_dropdown = None
     _language_dropdown = None
 
     ## BACKGROUND VARIABLES ##
-    _card_selector_frame = None
     _card_deck_values = []
 
     _backgroundThread = None
@@ -127,8 +117,8 @@ class UI:
 
         self._result_frame = tkinter.Frame(UI._background)
         self._result_frame.pack()
-        self._result_frame.config(bg="light slate gray", border=2, width=440, height=170)
-        self._result_frame.place(x=400,y=425)
+        self._result_frame.config(bg="light slate gray", border=2, width=420, height=170)
+        self._result_frame.place(x=390,y=430)
 
     def setDeckCard(self, slot: int, faceUp: bool):
         for widget in self._card_deck_frames_inside[slot].winfo_children():
@@ -251,7 +241,7 @@ class UI:
 
         canvas.create_oval(70, 215, 760, 440, outline="indianred4", width=2, fill="brown")
         canvas.create_oval(80, 225, 750, 425, outline="dark green", width=2, fill="dark green")
-        canvas.create_rectangle(400, 425, 840, 595, outline="black", width=2, fill="light slate gray")
+        canvas.create_rectangle(380, 425, 840, 595, outline="black", width=2, fill="light slate gray")
 
         return canvas
     
@@ -287,10 +277,10 @@ class UI:
 
     def refreshOpponents(self):
         UI._background.delete(UI._opponent_label)
-        UI._opponent_label = UI._background.create_text(50, 60, text=UI._opponents, fill="white", font=("Arial", 15))
-        pass
+        UI._opponent_label = UI._background.create_text(50, 185, text=UI._opponents, fill="white", font=("Arial", 15))
 
     def on_closing(self):
+        self._backgroundStopEvent.set()
         self.root.destroy()
 
     def up_button_click(self, event):
@@ -306,6 +296,7 @@ class UI:
     def reset_button_click(self, event):
         self.resetTableCards()
         self.resetDeckCards()
+        self._backgroundThread.cleanMemory()
 
     def card_click(self, event, relatedFrame, cardCode):
         print("Card: [" + str(cardCode[0]) + "," + str(cardCode[1]) + "] on frame " + str(relatedFrame))
@@ -434,9 +425,6 @@ class UIBackgroundThread(Thread):
             print(str(self._swappingCardsMemory))
 
             self.swappingFromMemory()
-            #self.drawRectangles()
-            self.paintCards()
-            #self.cleanRectangles()
 
             self.writeResultFrame()
         print("Background Thread Exit...")
@@ -446,6 +434,11 @@ class UIBackgroundThread(Thread):
             if (self._memoryRectangles[i]==None):
                 UI.drawRectangle(self._swappingCardsMemory, "orange")
     
+    def cleanMemory(self):
+        self._swappingCardsMemory = []
+        self._resultLabels = []
+        self._lastResults = []
+
     def swappingFromMemory(self):
         if len(self._swappingCardsMemory)>1:
             print(self._swappingCardsMemory[0][0].master.winfo_id())
@@ -484,12 +477,6 @@ class UIBackgroundThread(Thread):
     def keepInMemory(self, memoryArr):
         if len(self._swappingCardsMemory)<2:
             self._swappingCardsMemory.append(memoryArr)
-
-    def cleanRectangles(self):
-        pass
-
-    def paintCards(self):
-        pass
 
     def writeResultFrame(self):
         _card_slot_temp = self._UI._card_slot
