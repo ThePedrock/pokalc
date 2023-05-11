@@ -1,5 +1,5 @@
 import tkinter
-from tkinter import ttk, Label
+from tkinter import ttk, Label, Radiobutton
 from PIL import Image, ImageTk
 import json
 from threading import Thread
@@ -268,12 +268,29 @@ class UI:
         configFrame.place(x=690, y=135)
 
         # Language Dropdown
+        options = UI.LANGUAGES
+        self._language_dropdown = ttk.Combobox(configFrame)
+        self._language_dropdown['values'] = options
+        self._language_dropdown.current(self._language)
+        self._language_dropdown.pack()
+
+        '''
         varLangDropdown = tkinter.StringVar(configFrame)
         varLangDropdown.set("Language")
         UI._language_dropdown = ttk.Combobox(configFrame, textvariable=varLangDropdown)
+        #UI._language_dropdown["values"] = UI.LANGUAGES
         UI._language_dropdown["values"] = UI.LANGUAGES
+        UI._language_dropdown["options"] = UI.LANGUAGES
         UI._language_dropdown.current(self._language)
         UI._language_dropdown.pack()
+
+        
+        # Language RadioButton
+        options = [(UI.LANGUAGES[0], 0),(UI.LANGUAGES[1], 1)]
+        for text, value in options:
+            radiobutton = Radiobutton(configFrame, text=text, variable=self._language, value=value)
+            radiobutton.pack()
+        '''
 
     def refreshOpponents(self):
         UI._background.delete(UI._opponent_label)
@@ -424,16 +441,18 @@ class UIBackgroundThread(Thread):
             #print("Background Thread Loop...")
             print(str(self._swappingCardsMemory))
 
+            self.refreshLanguage()
+
             self.swappingFromMemory()
 
-            self.writeResultFrame()
+            self.writeResultFrame(False)
         print("Background Thread Exit...")
 
-    def drawRectangles(self):
-        for i in range(len(self._swappingCardsMemory)):
-            if (self._memoryRectangles[i]==None):
-                UI.drawRectangle(self._swappingCardsMemory, "orange")
-    
+    def refreshLanguage(self):
+        if (self._UI._language != self._UI._language_dropdown.current()):
+            self._UI._language = self._UI._language_dropdown.current()
+            self.writeResultFrame(True)
+ 
     def cleanMemory(self):
         self._swappingCardsMemory = []
         self._resultLabels = []
@@ -478,7 +497,7 @@ class UIBackgroundThread(Thread):
         if len(self._swappingCardsMemory)<2:
             self._swappingCardsMemory.append(memoryArr)
 
-    def writeResultFrame(self):
+    def writeResultFrame(self, force: bool):
         _card_slot_temp = self._UI._card_slot
         _opponents_temp = self._UI._opponents
         _result_frame = self._UI._result_frame
@@ -489,7 +508,7 @@ class UIBackgroundThread(Thread):
         _results = self.buildTextResult(_pCardsArr, _cCardsArr, _opponents_temp)
 
 
-        if (not UIBackgroundThread.compareResults(self._lastResults, _results)):
+        if ((not UIBackgroundThread.compareResults(self._lastResults, _results)) or force):
             for widget in _result_frame.winfo_children():
                 widget.destroy()
 
