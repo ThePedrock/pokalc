@@ -1,9 +1,8 @@
 import tkinter
-from tkinter import ttk, Label, Radiobutton
+from tkinter import ttk, Label
 from PIL import Image, ImageTk
 import json
-from threading import Thread
-from threading import Event
+from threading import Thread, Event
 from enum import Enum
 
 from table.card import Card

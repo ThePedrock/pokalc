@@ -1,6 +1,4 @@
-from table.card import Card
-from table.suit import Suit
-from table.deck import Deck
+
 from table.play import Play
 
 class Game:
