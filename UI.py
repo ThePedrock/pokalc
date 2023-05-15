@@ -14,6 +14,7 @@ from calculator.game import Game
 class UI:
     APPVERSION = "1.0"
     WINDOWS_SIZE = [850, 605]
+    DEBUGMODE = False
 
     ## IMAGE FROM: http://clipart-library.com/clipart/pT7K7d88c.htm ##
     POKER_DECK_IMAGE = "resources/pokerDeck.png"
@@ -69,6 +70,13 @@ class UI:
     def run(self):
         self.root.mainloop()
 
+    ## Runs thread in background
+    def initBackgroundLoopThread(self):
+        self._backgroundStopEvent = Event()
+        self._backgroundThread = UIBackgroundThread(self._backgroundStopEvent, self)
+        self._backgroundThread.start()
+
+    ## Loads settings from settings.json file
     def loadSettings(self):
         try:
             settings = None
@@ -79,6 +87,7 @@ class UI:
         except json.JSONDecodeError:
             pass
 
+    ## Builds table interface
     def tableBuilder(self):
         UI._background = self.buildBackground()
         self.buildInterface(UI._background)
@@ -105,9 +114,6 @@ class UI:
 
         self.resetDeckCards()
                 
-                #self._card_selector_items.append(tkinter.Label(self._card_deck_frame, image=UI.cardImage(i,j,UI.CARD_IMAGE_SIZE)))
-                #self._card_selector_items[len(self._card_selector_items)-1].place(x=(i*UI.CARD_IMAGE_SIZE[0])+4, y=(((i-(i%2))/2)*UI.CARD_IMAGE_SIZE[0])+4)
-
         for i in range(len(self._card_frames)):
             self._card_frames[i] = tkinter.Frame(UI._background)
             self._card_frames[i].pack()
@@ -120,6 +126,7 @@ class UI:
         self._result_frame.config(bg="light slate gray", border=2, width=420, height=170)
         self._result_frame.place(x=390,y=430)
 
+    ## Sets & draws card from teck face up or down
     def setDeckCard(self, slot: int, faceUp: bool):
         for widget in self._card_deck_frames_inside[slot].winfo_children():
                     widget.destroy()
@@ -145,10 +152,12 @@ class UI:
             aImage.bind("<B1-Motion>", lambda event: self.card_hold(event, self._card_deck_frames_inside[slot], aImage.cardCode))
             aImage.bind("<ButtonRelease-1>", lambda event: self.card_release(event, self._card_deck_frames_inside[slot], aImage.cardCode))
 
+    ## Sets whole deck face up
     def resetDeckCards(self):
         for i in range(len(self._card_deck_frames_inside)):
             self.setDeckCard(i, True)
 
+    ## Resets table cards to unknown
     def resetTableCards(self):
         for i in range(len(UI._card_frames)):
             if (i<2):
@@ -156,11 +165,7 @@ class UI:
             else:
                 self.setCardToSlot(0,0,i)
 
-    def initBackgroundLoopThread(self):
-        self._backgroundStopEvent = Event()
-        self._backgroundThread = UIBackgroundThread(self._backgroundStopEvent, self)
-        self._backgroundThread.start()
-
+    ## Creates Card object and loads related image
     def createCardAndImage(self, rank: int, suit: int, imageSizeArray):
         newCard = Card(rank, Suit(suit))
         imageRank = 0
@@ -186,6 +191,7 @@ class UI:
 
         return [newCard, newImage]
 
+    ## Sets one card to table slot
     def setCardToSlot(self, rank: int, suit: int, slot: int):
         self._card_slot[slot] = Card(rank, Suit(suit))
         imageRank = 0
@@ -213,6 +219,7 @@ class UI:
 
         self.setCardImageToSlot(imageRank, imageSuit, slot)
 
+    ## Sets one card image to table slot
     def setCardImageToSlot(self, rank: int, suit: int, slot: int):
         if (UI._card_labels[slot]!=None):
                 UI._card_labels[slot].destroy()
@@ -234,6 +241,7 @@ class UI:
         UI._card_labels[slot].bind("<B1-Motion>", lambda event: self.card_hold(event, UI._card_labels[slot], UI._card_labels[slot].cardCode))
         UI._card_labels[slot].bind("<ButtonRelease-1>", lambda event: self.card_release(event, UI._card_labels[slot], UI._card_labels[slot].cardCode))
 
+    ## Draws background in canvas
     def buildBackground(self):
         canvas = tkinter.Canvas(self.root, width=UI.WINDOWS_SIZE[0], height=UI.WINDOWS_SIZE[1])
         canvas.configure(bg="dark olive green")
@@ -245,6 +253,7 @@ class UI:
 
         return canvas
     
+    ## Loads control interface
     def buildInterface(self, aBackground):
         # Arrow shaped buttons
         UI._opponent_buttons[0] = aBackground.create_polygon(50, 140, 25, 165, 75, 165, fill="gray", outline="black")
@@ -274,60 +283,54 @@ class UI:
         self._language_dropdown.current(self._language)
         self._language_dropdown.pack()
 
-        '''
-        varLangDropdown = tkinter.StringVar(configFrame)
-        varLangDropdown.set("Language")
-        UI._language_dropdown = ttk.Combobox(configFrame, textvariable=varLangDropdown)
-        #UI._language_dropdown["values"] = UI.LANGUAGES
-        UI._language_dropdown["values"] = UI.LANGUAGES
-        UI._language_dropdown["options"] = UI.LANGUAGES
-        UI._language_dropdown.current(self._language)
-        UI._language_dropdown.pack()
-
-        
-        # Language RadioButton
-        options = [(UI.LANGUAGES[0], 0),(UI.LANGUAGES[1], 1)]
-        for text, value in options:
-            radiobutton = Radiobutton(configFrame, text=text, variable=self._language, value=value)
-            radiobutton.pack()
-        '''
-
+    ## Refresh opponents label in canvas
     def refreshOpponents(self):
         UI._background.delete(UI._opponent_label)
         UI._opponent_label = UI._background.create_text(50, 185, text=UI._opponents, fill="white", font=("Arial", 15))
 
+    ## Event handler when clossing
     def on_closing(self):
         self._backgroundStopEvent.set()
         self.root.destroy()
 
+    ## Event handler when clicking up button
     def up_button_click(self, event):
         if (UI._opponents<9):
             UI._opponents+=1
             self.refreshOpponents()
 
+    ## Event handler when clicking down button
     def down_button_click(self, event):
         if (UI._opponents>1):
             UI._opponents-=1
             self.refreshOpponents()
     
+    ## Event handler when clicking reset button
     def reset_button_click(self, event):
         self.resetTableCards()
         self.resetDeckCards()
         self._backgroundThread.cleanMemory()
 
+    ## Event handler when clicking card
     def card_click(self, event, relatedFrame, cardCode):
-        print("Card: [" + str(cardCode[0]) + "," + str(cardCode[1]) + "] on frame " + str(relatedFrame))
+        if (self.DEBUGMODE):
+            print("Card: [" + str(cardCode[0]) + "," + str(cardCode[1]) + "] on frame " + str(relatedFrame))
         
         self._backgroundThread.keepInMemory([relatedFrame, cardCode])
 
         return True
 
+    ## Event handler when holding card
     def card_hold(self, event, relatedFrame, cardCode):
-        print("Holding Card!")
+        if (self.DEBUGMODE):
+            print("Holding Card!")
 
+    ## Event handler when releasing card
     def card_release(self, event, relatedFrame, cardCode):
-        print("Release Card!")
+        if (self.DEBUGMODE):
+            print("Release Card!")
 
+    ## Loads card image
     @staticmethod
     def cardImage(rank: int, suit: int, size):
         _rank = rank
@@ -348,26 +351,7 @@ class UI:
 
         return ImageTk.PhotoImage(image_crop_resize)
     
-    @staticmethod
-    def drawRectangle(background, slot: int):
-        rectangle = background.create_rectangle(UI.CARD_LOCATION[slot][0]-UI.REDRECTANGLE_WIDTH, 
-                                          UI.CARD_LOCATION[slot][1]-UI.REDRECTANGLE_WIDTH, 
-                                          UI.CARD_LOCATION[slot][0]+UI.CARD_SIZE[0]+(UI.REDRECTANGLE_WIDTH*2), 
-                                          UI.CARD_LOCATION[slot][1]+UI.CARD_SIZE[1]+(UI.REDRECTANGLE_WIDTH*2), 
-                                          outline="orange", width=UI.REDRECTANGLE_WIDTH)
-        
-        return rectangle
-    
-    @staticmethod
-    def drawRectangle(frame, colour):
-        rectangle = frame.create_rectangle(0,0,frame.windo_width(),frame.windo_height(), 
-                                           outline=colour, width=UI.REDRECTANGLE_WIDTH)
-    
-    @staticmethod
-    def deleteRectangle(background, RECtangle):
-        if (background!=None):
-            background.delete(RECtangle)          
-
+    ## Translates deck slot to card code
     @staticmethod
     def deckSlotToCardCode(deckSlot: int):
         _deckSlot = deckSlot+1
@@ -375,10 +359,12 @@ class UI:
         _rank = int((deckSlot%13)+1)
         return [_rank, _suit]
 
+    ## Translates deck card code to slot
     @staticmethod
     def deckCardCodeToSlot(cardCode):
         return (13*(cardCode[1]-1))+(cardCode[0]-1)
 
+    ## Translates image code to card code
     @staticmethod
     def imageCodeToCardCode(_rank: int, _suit: int):
         if _suit>3:
@@ -403,6 +389,7 @@ class UI:
 
         return [codeRank, codeSuit]     
 
+    ## gets colour value when given from 0 (Full red) to 100 (Full green)
     @staticmethod
     def getRGBFromScale(scale):
         value = scale*255
@@ -436,32 +423,38 @@ class UIBackgroundThread(Thread):
         self._UI = ui        
 
     def run(self):
-        print("Background Thread Start...")
+        if (self._UI.DEBUGMODE):
+            print("Background Thread Start...")
         while not self._stopped.wait(0.5):
-            #print("Background Thread Loop...")
-            print(str(self._swappingCardsMemory))
+            if (self._UI.DEBUGMODE):
+                print(str(self._swappingCardsMemory))
 
             self.refreshLanguage()
 
             self.swappingFromMemory()
 
             self.writeResultFrame(False)
-        print("Background Thread Exit...")
+        if (self._UI.DEBUGMODE):
+            print("Background Thread Exit...")
 
+    ## Checks if language config has changed and uploads texts
     def refreshLanguage(self):
         if (self._UI._language != self._UI._language_dropdown.current()):
             self._UI._language = self._UI._language_dropdown.current()
             self.writeResultFrame(True)
  
+    ## Clean selected card memory
     def cleanMemory(self):
         self._swappingCardsMemory = []
         self._resultLabels = []
         self._lastResults = []
 
+    ## Swapping selected cards
     def swappingFromMemory(self):
         if len(self._swappingCardsMemory)>1:
-            print(self._swappingCardsMemory[0][0].master.winfo_id())
-            print(self._UI._card_deck_frame.winfo_id())
+            if (self._UI.DEBUGMODE):
+                print(self._swappingCardsMemory[0][0].master.winfo_id())
+                print(self._UI._card_deck_frame.winfo_id())
             if (self._swappingCardsMemory[0][0].master.winfo_id()==self._UI._card_deck_frame.winfo_id() or
                 self._swappingCardsMemory[1][0].master.winfo_id()==self._UI._card_deck_frame.winfo_id()):
                     if (self._swappingCardsMemory[0][0].winfo_parent()==self._swappingCardsMemory[1][0].winfo_id()):
@@ -492,11 +485,13 @@ class UIBackgroundThread(Thread):
                                     self._swappingCardsMemory[1][0].slot)
 
             self._swappingCardsMemory = []        
-        
+
+    ## keeps up to two selected cards in memory   
     def keepInMemory(self, memoryArr):
         if len(self._swappingCardsMemory)<2:
             self._swappingCardsMemory.append(memoryArr)
 
+    ## Writes results
     def writeResultFrame(self, force: bool):
         _card_slot_temp = self._UI._card_slot
         _opponents_temp = self._UI._opponents
@@ -524,6 +519,7 @@ class UIBackgroundThread(Thread):
 
             self._lastResults = _results
 
+    ## Builds result text
     def buildTextResult(self, pCardsArr, cCardsArr, opponents: int):
         _pCardsArr = list(pCardsArr)
         _cCardsArr = list(cCardsArr)
@@ -539,18 +535,10 @@ class UIBackgroundThread(Thread):
 
         if not _result[0]:
             return [[_result[1],"",0]]
-        
-        #_arrText = None
-        #_arrText = self.runEstimation(_pCardsArr, _cCardsArr, opponents)
 
         return self.runEstimation(_pCardsArr, _cCardsArr, opponents)
 
-        #_result = ""
-        #for sentence in _arrText:
-        #    _result += sentence + "\n"
-
-        #return _result
-
+    ## Validates if cards on table are acceptable
     def validateTable(self, pCardsArr, cCardsArr, opponents: int):
         _language = int(self._UI._language)
         if (len(pCardsArr)!=2):
@@ -579,6 +567,7 @@ class UIBackgroundThread(Thread):
         
         return [True, Messages._000._value_[_language]]
     
+    ## Does estimation
     def runEstimation(self, pCardsArr, cCardsArr, opponents: int):
         _language = int(self._UI._language)
         _pCardsArr = []
@@ -615,27 +604,13 @@ class UIBackgroundThread(Thread):
                     [Messages._014._value_[_language] + " : ","{:.2%}".format(_winningProbArr[6]), _winningProbArr[6]],
                     [Messages._015._value_[_language] + " : ","{:.2%}".format(_winningProbArr[7]), _winningProbArr[7]],
                     [Messages._016._value_[_language] + " : ","{:.2%}".format(_winningProbArr[8]), _winningProbArr[8]]]
-
-        '''        
-        _return = []
-        _return.append("")
-        _return.append(Messages._004._value_[_language] + " : " + Card.stringifyCardArray(_pCardsArr))
-        _return.append(Messages._005._value_[_language] + " : " + Card.stringifyCardArray(_cCardsArr))
-        _return.append(Messages._006._value_[_language] + " : " + str(opponents))
-        _return.append(Messages._007._value_[_language])
-        _return.append(Messages._008._value_[_language] + " :" + "{:.2%}".format(Game.winning_probability_with_table(probability_table, opponents+1, Play.ONE_PAIR)))
-        _return.append(Messages._009._value_[_language] + " :" + "{:.2%}".format(Game.winning_probability_with_table(probability_table, opponents+1, Play.TWO_PAIR)))
-        _return.append(Messages._010._value_[_language] + " :" + "{:.2%}".format(Game.winning_probability_with_table(probability_table, opponents+1, Play.THREE_OF_A_KIND)))
-        _return.append(Messages._011._value_[_language] + " :" + "{:.2%}".format(Game.winning_probability_with_table(probability_table, opponents+1, Play.STRAIGHT)))
-        _return.append(Messages._012._value_[_language] + " :" + "{:.2%}".format(Game.winning_probability_with_table(probability_table, opponents+1, Play.FLUSH)))
-        _return.append(Messages._013._value_[_language] + " :" + "{:.2%}".format(Game.winning_probability_with_table(probability_table, opponents+1, Play.FOUR_OF_A_KIND)))
-        _return.append(Messages._014._value_[_language] + " :" + "{:.2%}".format(Game.winning_probability_with_table(probability_table, opponents+1, Play.STRAIGHT_FLUSH)))
-        _return.append(Messages._015._value_[_language] + " :" + "{:.2%}".format(Game.winning_probability_with_table(probability_table, opponents+1, Play.ROYAL_FLUSH)))
-        _return.append(Messages._016._value_[_language] + " :" + "{:.2%}".format(Game.winning_probability_with_table(probability_table, opponents+1, None)))
-        '''
+        
+        if (_results[len(_results)-1][2]>1):
+            _results[len(_results)-1][1]="???.??%"
         
         return _results
 
+    ## Checks if a pair of results are the same
     @staticmethod
     def compareResults(results1, results2):
         if (len(results1)!=len(results2)):

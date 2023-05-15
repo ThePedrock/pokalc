@@ -56,7 +56,7 @@ class Game:
                         else:
                             nProbability *= (4/((Game.TOTAL_DECK_CARDS)-len(hand))) * (3/((Game.TOTAL_DECK_CARDS)-len(hand)-1))
 
-                probability += nProbability
+                    probability += nProbability
         
         return probability
 
